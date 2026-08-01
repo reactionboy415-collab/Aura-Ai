@@ -1,11 +1,21 @@
 import express from 'express';
 import path from 'path';
-import { createServer as createViteServer } from 'vite';
 
 const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: '10mb' }));
+
+// CORS headers for Vercel and cross-origin compatibility
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, content-type, Authorization');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 // In-memory reports store
 const reportsStore = new Map<string, any>();
@@ -220,7 +230,7 @@ function getDomainCategoryData(brandName: string, domain: string) {
 }
 
 // API Route 1: Scrape Website Info
-app.get('/api/scrape-website-info', async (req, res) => {
+app.get(['/api/scrape-website-info', '/scrape-website-info'], async (req, res) => {
   try {
     const rawUrl = (req.query.url as string) || 'https://linktree.com';
     const cleanUrl = normalizeUrl(decodeURIComponent(rawUrl));
@@ -244,7 +254,7 @@ app.get('/api/scrape-website-info', async (req, res) => {
 });
 
 // API Route 2: Competitors Suggest
-app.post('/api/competitors/suggest', async (req, res) => {
+app.post(['/api/competitors/suggest', '/competitors/suggest'], async (req, res) => {
   try {
     const { brandName = 'Brand', url = '', description = '' } = req.body;
     const cleanUrl = normalizeUrl(url);
@@ -260,7 +270,7 @@ app.post('/api/competitors/suggest', async (req, res) => {
 });
 
 // API Route 3: Prompts Suggest
-app.post('/api/prompts/suggest', async (req, res) => {
+app.post(['/api/prompts/suggest', '/prompts/suggest'], async (req, res) => {
   try {
     const { brandName = 'Brand', description = '', url = '' } = req.body;
     const cleanBrand = brandName || 'Brand';
@@ -282,7 +292,7 @@ app.post('/api/prompts/suggest', async (req, res) => {
 });
 
 // API Route 4: Reports Create
-app.post('/api/reports/create', (req, res) => {
+app.post(['/api/reports/create', '/reports/create'], (req, res) => {
   try {
     const {
       user_id = null,
@@ -334,7 +344,7 @@ app.post('/api/reports/create', (req, res) => {
 });
 
 // API Route 5: Free Analysis Run
-app.post('/api/free-analysis/run', async (req, res) => {
+app.post(['/api/free-analysis/run', '/free-analysis/run'], async (req, res) => {
   try {
     const {
       brandName = 'Brand',
@@ -466,7 +476,7 @@ app.post('/api/free-analysis/run', async (req, res) => {
 });
 
 // API Route 6: Reports Update
-app.post('/api/reports/update', (req, res) => {
+app.post(['/api/reports/update', '/reports/update'], (req, res) => {
   try {
     const { id, data } = req.body;
     if (!id) {
@@ -499,7 +509,7 @@ app.post('/api/reports/update', (req, res) => {
 });
 
 // API Route 7: Get Free Report
-app.get('/api/getfreereport', (req, res) => {
+app.get(['/api/getfreereport', '/getfreereport'], (req, res) => {
   try {
     const reportId = req.query.reportId as string;
     if (!reportId) {
@@ -550,12 +560,12 @@ export default app;
 
 // Vite & Production Static Setup
 async function startServer() {
-  // If running in Vercel serverless environment, Vercel handles routing via api/index.ts
   if (process.env.VERCEL) {
     return;
   }
 
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
