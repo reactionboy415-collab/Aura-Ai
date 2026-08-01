@@ -1,0 +1,6 @@
+{
+  "name": "AuraAI — AI Brand Visibility & Geo-SEO Intelligence",
+  "description": "Next-generation AI Search Intelligence SaaS. Monitor, benchmark, and optimize how ChatGPT, Gemini, Perplexity, and Claude perceive and rank your brand.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
