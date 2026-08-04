@@ -17,6 +17,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Vercel Serverless Path Normalizer Middleware
+app.use((req, res, next) => {
+  if (req.originalUrl && req.originalUrl.length > 0) {
+    const rawPath = req.originalUrl.split('?')[0];
+    if (rawPath.startsWith('/api/')) {
+      req.url = req.originalUrl;
+    }
+  }
+  next();
+});
+
 // In-memory reports store
 const reportsStore = new Map<string, any>();
 
@@ -556,6 +567,23 @@ app.get(['/api/getfreereport', '/getfreereport'], (req, res) => {
   }
 });
 
+// Catch-all 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: `Route not found: ${req.method} ${req.url}`,
+    path: req.url,
+    originalUrl: req.originalUrl,
+  });
+});
+
+// Global 500 Error handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[Express Error]:', err);
+  res.status(500).json({
+    error: err?.message || 'Internal Server Error',
+  });
+});
+
 export default app;
 
 // Vite & Production Static Setup
@@ -565,12 +593,16 @@ async function startServer() {
   }
 
   if (process.env.NODE_ENV !== 'production') {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.error('Vite failed to initialize:', e);
+    }
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
